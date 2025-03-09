@@ -1,35 +1,25 @@
 <template>
-  <!-- <t-space align="center">
-    <t-button theme="primary" @click="visibleModelessDrag = true">AI助手可拖拽</t-button>
-  </t-space> -->
-   <FloatingBall @click="visibleModelessDrag = true"></FloatingBall>
-  <t-dialog
-    :top="10"
-    :right="10"
-    v-model:visible="visibleModelessDrag"
-    :footer="false"
-    header="AI助手-DeepSeek大模型"
-    mode="modeless"
-    draggable
-    :on-confirm="() => (visibleModelessDrag = false)"
-  >
-    <template #body>
-      <t-chat
-        layout="single"
-        style="height: 600px"
-        :clear-history="chatList.length > 0 && !isStreamLoad"
-        @on-action="operation"
-        @clear="clearConfirm"
-      >
-        <template v-for="(item, index) in chatList" :key="index">
-          <t-chat-item
-            :avatar="item.avatar"
-            :name="item.name"
-            :role="item.role"
-            :datetime="item.datetime"
-            :content="item.content"
-            :text-loading="index === 0 && loading"
-          >
+  <t-space align="center">
+    <t-button theme="primary" @click="visible = true">AI助手悬窗展示</t-button>
+  </t-space>
+  <t-drawer v-model:visible="visible" :footer="false" size="33vw" :close-btn="true" class="drawer-box">
+    <template #header>
+      <t-avatar size="32px" shape="circle" image="https://tdesign.gtimg.com/site/chat-avatar.png"></t-avatar>
+      <span class="title">Hi, &nbsp;我是AI</span>
+    </template>
+    <t-chat
+      layout="both"
+      :clear-history="chatList.length > 0 && !isStreamLoad"
+      @on-action="operation"
+      @clear="clearConfirm"
+    >
+      <template v-for="(item, index) in chatList" :key="index">
+        <t-chat-item
+          :role="item.role"
+          :content="item.content"
+          :text-loading="index === 0 && loading"
+          :variant="getStyle(item.role)"
+        >
           <template v-if="!isStreamLoad" #actions>
             <t-chat-action
               :is-good="isGood"
@@ -39,47 +29,62 @@
               @operation="handleOperation"
             />
           </template>
-          </t-chat-item>
-        </template>
-        <template #footer>
-          <t-chat-input :stop-disabled="isStreamLoad" @send="inputEnter" @stop="onStop"> </t-chat-input>
-        </template>
-      </t-chat>
-    </template>
-  </t-dialog>
+        </t-chat-item>
+      </template>
+      <template #footer>
+        <t-chat-input :stop-disabled="isStreamLoad" @send="inputEnter" @stop="onStop"> </t-chat-input>
+      </template>
+    </t-chat>
+  </t-drawer>
 </template>
 <script setup>
 import { ref } from 'vue';
-import FloatingBall from './FloatingBall.vue';
-import { MockSSEResponse } from './sseRequest.ts';
-import chatAbatar from '@/assets/chat-avatar.png'
-import avatar from '@/assets/avatar.jpg'
-import ball from '@/assets/ball.gif'
+const visible = ref(false);
+import { MockSSEResponse } from './sseRequestDraw.ts';
 
-const visibleModelessDrag = ref(false);
 const fetchCancel = ref(null);
 const loading = ref(false);
 const isStreamLoad = ref(false);
 const isGood = ref(false);
 const isBad = ref(false);
 
+const getStyle = (role) => {
+  if (role === 'assistant') {
+    return 'outline';
+  }
+  if (role === 'user') {
+    return 'base';
+  }
+  if (role === 'error') {
+    return 'text';
+  }
+  return 'text';
+};
+
+const handleOperation = function (type, options) {
+  const { index } = options;
+  if (type === 'good') {
+    isGood.value = !isGood.value;
+    isBad.value = false;
+  } else if (type === 'bad') {
+    isBad.value = !isBad.value;
+    isGood.value = false;
+  } else if (type === 'replay') {
+    const userQuery = chatList.value[index + 1].content;
+    inputEnter(userQuery);
+  }
+};
 // 倒序渲染
 const chatList = ref([
   {
-    content: `由 <span>deepseek</span> 辅助 <span>决策</span>`,
+    content: `模型由 <span>hunyuan</span> 变为 <span>GPT4</span>`,
     role: 'model-change',
   },
   {
-    avatar: ball,
-    name: 'AI',
-    datetime: '今天16:38',
     content: '它叫 McMurdo Station ATM，是美国富国银行安装在南极洲最大科学中心麦克默多站的一台自动提款机。',
     role: 'assistant',
   },
   {
-    avatar: avatar,
-    name: '自己',
-    datetime: '今天16:38',
     content: '南极的自动提款机叫什么名字？',
     role: 'user',
   },
@@ -101,31 +106,13 @@ const inputEnter = function (inputValue) {
     return;
   }
   if (!inputValue) return;
-  
-  // 定义一个函数将日期转换为指定格式
-  const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  };
-
   const params = {
-    avatar: avatar,
-    name: '自己',
-    // 使用自定义函数格式化日期
-    datetime: formatDate(new Date()),
     content: inputValue,
     role: 'user',
   };
   chatList.value.unshift(params);
   // 空消息占位
   const params2 = {
-    avatar: ball,
-    name: 'TD&AI',
     content: '',
     role: 'assistant',
   };
@@ -178,8 +165,7 @@ const handleData = async () => {
   loading.value = true;
   isStreamLoad.value = true;
   const lastItem = chatList.value[0];
-  const mockedData = `example
-`;
+  const mockedData = `这是一段模拟的流式字符串数据。`;
   const mockResponse = new MockSSEResponse(mockedData);
   fetchCancel.value = mockResponse;
   await fetchSSE(
@@ -204,22 +190,32 @@ const handleData = async () => {
     },
   );
 };
-const handleOperation = function (type, options) {
-  const { index } = options;
-  if (type === 'good') {
-    isGood.value = !isGood.value;
-    isBad.value = false;
-  } else if (type === 'bad') {
-    isBad.value = !isBad.value;
-    isGood.value = false;
-  } else if (type === 'replay') {
-    const userQuery = chatList.value[index + 1].content;
-    inputEnter(userQuery);
-  }
-};
 </script>
-<style scoped lang="less">
+<style lang="less">
 .chat-ai {
-  height: 600px;
+  height: 100%;
+}
+.title {
+  margin-left: 16px;
+  font-size: 20px;
+  color: var(--td-font-gray-1);
+  font-weight: 600;
+  line-height: 28px;
+}
+.drawer-box {
+  .t-drawer__header {
+    padding: 32px;
+  }
+  .t-drawer__body {
+    padding: 30px 32px;
+  }
+  .t-drawer__close-btn {
+    right: 32px;
+    top: 36px;
+    background-color: var(--td-gray-color-1);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
 }
 </style>
