@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 预览地址：https://xuyangzhou.github.io/vue-chartgpt/#/
 
 **##技术栈**
@@ -128,3 +129,7 @@ npm run test:unit
 ```
 npm run lint
 ```
+=======
+# chatForAI
+使用TD chatForAI 搭建网页端AI聊天工具
+>>>>>>> a69119c2929bcd2b3b6fa9a2affa505a6376b3b6
