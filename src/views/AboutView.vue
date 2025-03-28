@@ -2,7 +2,7 @@
   <!-- <t-space align="center">
     <t-button theme="primary" @click="visibleModelessDrag = true">AI助手可拖拽</t-button>
   </t-space> -->
-   <FloatingBall @click="visibleModelessDrag = true"></FloatingBall>
+  <FloatingBall @click="visibleModelessDrag = true"></FloatingBall>
   <t-dialog
     :top="10"
     :right="10"
@@ -218,8 +218,12 @@ const handleOperation = function (type, options) {
   }
 };
 </script>
-<style scoped lang="less">
+<style  lang="less">
 .chat-ai {
   height: 600px;
 }
+// 添加自定义样式来改变对话框的背景颜色
+// .t-dialog {
+//   background-color: rgb(232, 19, 19) !important; // 这里可以根据需要修改背景颜色
+// }
 </style>
